@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Script Slideshow Template</title>
+
+  <style>
+    /*
+      =========================
+      BASIC PAGE STYLES
+      =========================
+      You can change the background, text color, font, and spacing here.
+    */
+
+    :root {
+      --background: #111;
+      --text: #f5f5f5;
+      --muted: #aaa;
+      --timer-bg: #333;
+      --timer-ok: #8fd18f;
+      --timer-warning: #ffd166;
+      --timer-over: #ff5555;
+      --accent: #8ab4f8;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    /*
+      Main slide area.
+      Change font-size here if you want bigger/smaller teleprompter text.
+    */
+    .slide {
+      box-sizing: border-box;
+      width: 100vw;
+      min-height: 100vh;
+      padding: 72px 96px 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      font-size: 44px;
+      line-height: 1.35;
+    }
+
+    /*
+      =========================
+      SLIDE CONTENT STYLES
+      =========================
+      These styles apply to HTML inside each slide.
+      You can use <h1>, <p>, <ul>, <strong>, <em>, etc.
+    */
+
+    .slide h1 {
+      font-size: 64px;
+      line-height: 1.1;
+      margin: 0 0 28px;
+    }
+
+    .slide h2 {
+      font-size: 48px;
+      line-height: 1.2;
+      margin: 0 0 24px;
+      color: var(--accent);
+    }
+
+    .slide p {
+      margin: 0 0 24px;
+    }
+
+    .slide ul,
+    .slide ol {
+      margin: 0;
+      padding-left: 1.2em;
+    }
+
+    .slide li {
+      margin-bottom: 16px;
+    }
+
+    .slide strong {
+      color: var(--accent);
+    }
+
+    .slide .small {
+      font-size: 30px;
+      color: var(--muted);
+    }
+
+    .slide .callout {
+      margin-top: 24px;
+      padding: 24px 28px;
+      border-left: 6px solid var(--accent);
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+    }
+
+    /*
+      Timer bar at bottom.
+    */
+    .timer-track {
+      position: fixed;
+      bottom: 72px;
+      left: 32px;
+      right: 32px;
+      height: 14px;
+      background: var(--timer-bg);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .timer-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--timer-ok);
+      transition: width 0.1s linear, background 0.2s;
+    }
+
+    .timer-bar.warning {
+      background: var(--timer-warning);
+    }
+
+    .timer-bar.over {
+      background: var(--timer-over);
+    }
+
+    .meta {
+      position: fixed;
+      bottom: 24px;
+      left: 32px;
+      right: 32px;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      font-size: 18px;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .help {
+      position: fixed;
+      top: 20px;
+      right: 28px;
+      font-size: 14px;
+      color: var(--muted);
+      opacity: 0.75;
+      user-select: none;
+    }
+
+    /*
+      Optional: make the slide text a bit smaller on narrow screens.
+    */
+    @media (max-width: 800px) {
+      .slide {
+        padding: 56px 36px 140px;
+        font-size: 32px;
+      }
+
+      .slide h1 {
+        font-size: 44px;
+      }
+
+      .slide h2 {
+        font-size: 36px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="slide" id="slide"></main>
+
+  <div class="help">
+    Enter / Space / Click = next · Left Arrow / Backspace = previous · F = fullscreen · R = restart timer
+  </div>
+
+  <div class="timer-track" aria-hidden="true">
+    <div class="timer-bar" id="timerBar"></div>
+  </div>
+
+  <div class="meta">
+    <div id="timerText"></div>
+    <div id="slideCount"></div>
+  </div>
+
+  <script>
+    /*
+      =========================
+      HOW TO ADD YOUR SCRIPT
+      =========================
+
+      Add one object per slide inside the slides array below.
+
+      Each slide has:
+        html: The content to display. You can use normal HTML tags.
+        seconds: The target time for that slide.
+
+      Example:
+
+      {
+        html: `
+          <h1>Your title</h1>
+          <p>Your script text goes here.</p>
+          <p><strong>Important phrase</strong> you want emphasized.</p>
+        `,
+        seconds: 20
+      }
+
+      Tips:
+      - Keep each slide to one idea or one spoken beat.
+      - Use <strong>...</strong> for important words.
+      - Use <em>...</em> for lighter emphasis.
+      - Use <ul><li>...</li></ul> for bullet points.
+      - Use <p class="small">...</p> for quieter notes.
+      - Use <div class="callout">...</div> for a highlighted block.
+    */
+
+    const slides = [
+      {
+        // Title slide — use <h1> for the video title.
+        html: `
+          <h1>Your Video Title</h1>
+          <p>Replace this with a one-line description of what the video covers.</p>
+          <p class=”small”>This is a sample slide. Replace all slides with your own script.</p>
+        `,
+        seconds: 15
+      },
+      {
+        // Section slide — use <h2> for a major beat or section heading.
+        html: `
+          <h2>Main point</h2>
+          <p>Replace this with the core idea you want to cover here.</p>
+          <div class=”callout”>
+            Use a callout block for a key quote or takeaway you want to emphasise.
+          </div>
+        `,
+        seconds: 25
+      },
+      {
+        // List slide — good for a set of related items.
+        html: `
+          <h2>Supporting points</h2>
+          <ul>
+            <li>First supporting detail</li>
+            <li>Second supporting detail</li>
+            <li>Third supporting detail</li>
+          </ul>
+        `,
+        seconds: 30
+      },
+      {
+        // Closing slide — wrap up and call to action.
+        html: `
+          <h2>Closing</h2>
+          <p>Summarise what the viewer just learned.</p>
+          <p><strong>Call to action</strong> — tell them what to do next.</p>
+        `,
+        seconds: 20
+      }
+    ];
+
+    /*
+      =========================
+      SLIDESHOW CODE
+      =========================
+      You usually do not need to edit anything below this line.
+    */
+
+    let index = 0;
+    let slideStartTime = Date.now();
+    let animationFrameId;
+
+    const slideElement = document.getElementById("slide");
+    const timerBar = document.getElementById("timerBar");
+    const timerText = document.getElementById("timerText");
+    const slideCount = document.getElementById("slideCount");
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, "0")}`;
+    }
+
+    function restartTimer() {
+      slideStartTime = Date.now();
+    }
+
+    function renderSlide() {
+      const slide = slides[index];
+
+      // This allows each slide to contain styled HTML.
+      // Only use this with HTML content you wrote yourself.
+      slideElement.innerHTML = slide.html;
+
+      slideCount.textContent = `${index + 1} / ${slides.length}`;
+      restartTimer();
+
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+
+      updateTimer();
+    }
+
+    function updateTimer() {
+      const slide = slides[index];
+      const elapsedSeconds = (Date.now() - slideStartTime) / 1000;
+      const allottedSeconds = slide.seconds;
+
+      const percent = Math.min((elapsedSeconds / allottedSeconds) * 100, 100);
+
+      timerBar.style.width = `${percent}%`;
+      timerBar.classList.toggle("warning", percent >= 80 && percent < 100);
+      timerBar.classList.toggle("over", elapsedSeconds > allottedSeconds);
+
+      timerText.textContent = `${formatTime(elapsedSeconds)} / ${formatTime(allottedSeconds)}`;
+
+      animationFrameId = requestAnimationFrame(updateTimer);
+    }
+
+    function next() {
+      if (index < slides.length - 1) {
+        index++;
+        renderSlide();
+      }
+    }
+
+    function previous() {
+      if (index > 0) {
+        index--;
+        renderSlide();
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    document.body.addEventListener("click", next);
+
+    document.addEventListener("keydown", (event) => {
+      if (["Enter", " ", "ArrowRight"].includes(event.key)) {
+        event.preventDefault();
+        next();
+      }
+
+      if (["ArrowLeft", "Backspace"].includes(event.key)) {
+        event.preventDefault();
+        previous();
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+
+      if (event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        restartTimer();
+      }
+    });
+
+    renderSlide();
+  </script>
+</body>
+</html>

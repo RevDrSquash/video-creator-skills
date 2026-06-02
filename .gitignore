@@ -1,0 +1,19 @@
+# Generated output files (not part of the plugin itself)
+*.output.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Node (if tooling is added later)
+node_modules/

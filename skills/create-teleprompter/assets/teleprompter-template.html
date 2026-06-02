@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teleprompter Script Template</title>
+
+  <style>
+    /*
+      TELEPROMPTER TEMPLATE
+
+      - Spoken text and stage directions are defined in scriptSections below.
+      - Each section can set its own pace: either a duration (e.g. "12s") or a
+        speedMultiplier. Sections with neither use the default lines-per-minute.
+      - Stage directions are shown differently from spoken text.
+      - Press T while running to see the estimated timing for every section.
+    */
+
+    :root {
+      --background: #0f0f0f;
+      --text: #f5f5f5;
+      --muted: #a8a8a8;
+      --direction: #ffd166;
+      --accent: #8ab4f8;
+      --progress-bg: #333;
+      --progress-fill: #8fd18f;
+
+      /* Change these to tune readability. */
+      --font-size: 44px;
+      --line-height: 1.45;
+      --content-width: 1000px;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .prompter {
+      box-sizing: border-box;
+      height: 100vh;
+      overflow: hidden;
+      padding: 42vh 10vw 48vh;
+      font-size: var(--font-size);
+      line-height: var(--line-height);
+    }
+
+    .script {
+      max-width: var(--content-width);
+      margin: 0 auto;
+    }
+
+    .text {
+      white-space: pre-wrap;
+    }
+
+    .block {
+      margin-bottom: 0.4em;
+    }
+
+    .spoken {
+      color: var(--text);
+    }
+
+    .direction {
+      color: var(--direction);
+      font-size: 0.78em;
+      line-height: 1.35;
+      font-style: italic;
+      opacity: 0.9;
+      border-left: 5px solid var(--direction);
+      padding-left: 0.75em;
+      margin-top: 0.5em;
+      margin-bottom: 0.4em;
+    }
+
+    .section-label {
+      color: var(--accent);
+      font-size: 0.55em;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.7em;
+    }
+
+    .hud {
+      position: fixed;
+      left: 24px;
+      right: 24px;
+      bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 15px;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .hud strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .help {
+      text-align: right;
+    }
+
+    .progress-track {
+      position: fixed;
+      left: 24px;
+      right: 24px;
+      bottom: 58px;
+      height: 10px;
+      background: var(--progress-bg);
+      border-radius: 999px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--progress-fill);
+    }
+
+    .reading-guide {
+      position: fixed;
+      left: 12vw;
+      right: 12vw;
+      top: 50%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.09);
+      pointer-events: none;
+    }
+
+    #timingPanel {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      max-width: 380px;
+      max-height: 70vh;
+      overflow: auto;
+      background: rgba(20, 20, 20, 0.92);
+      border: 1px solid #2c2c2c;
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      z-index: 50;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    #timingPanel.hidden { display: none; }
+
+    #timingPanel h2 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    #timingPanel .total {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    #timingPanel table { width: 100%; border-collapse: collapse; }
+
+    #timingPanel th,
+    #timingPanel td {
+      text-align: left;
+      padding: 3px 6px 3px 0;
+      vertical-align: top;
+    }
+
+    #timingPanel th {
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid #2c2c2c;
+    }
+
+    #timingPanel td.num,
+    #timingPanel th.num { text-align: right; white-space: nowrap; }
+
+    #timingPanel tr.direction td { color: var(--direction); font-style: italic; }
+
+    #timingPanel .note { margin-top: 10px; color: var(--muted); font-size: 11px; }
+
+    @media (max-width: 800px) {
+      :root { --font-size: 32px; }
+      .prompter { padding-left: 7vw; padding-right: 7vw; }
+      .hud { grid-template-columns: 1fr; }
+      .help { text-align: left; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="reading-guide"></div>
+
+  <main class="prompter" id="prompter">
+    <div class="script" id="script"></div>
+  </main>
+
+  <div class="progress-track">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="hud">
+    <div id="status"></div>
+    <div class="help">
+      Space / Click = play-pause · ↑/↓ = speed · ←/→ = jump · R = restart · F = fullscreen · T = timing
+    </div>
+  </div>
+
+  <div id="timingPanel" class="hidden"></div>
+
+  <script>
+    /*
+      BASIC SPEED SETTINGS
+
+      defaultLinesPerMinute is the fallback pace for any section that does not
+      set its own duration or speedMultiplier.
+
+      Avoid very low values: at 44px text with 1.45 line height, 4 lines/minute
+      is only about 4 pixels/second, which can look frozen rather than moving.
+
+      Suggested starting values:
+      - 14 to 18 lines/minute: slow and deliberate
+      - 18 to 24 lines/minute: natural educational video pace
+      - 24 to 30 lines/minute: faster delivery
+    */
+
+    const defaultLinesPerMinute = 26; // normal teleprompter pace; tune to taste
+
+    /* Each ArrowUp / ArrowDown press changes the global speed by this much. */
+    const speedStep = 0.05;
+
+    /*
+      HOW TO WRITE YOUR SCRIPT
+
+      Each section supports:
+
+      type:
+        "spoken"    = normal script text
+        "direction" = stage direction, shown in a different style
+
+      label:
+        Optional small heading above the block.
+
+      text:
+        Plain multiline script text inside backticks.
+
+      speedMultiplier:
+        Optional. Multiplies the default speed for this section.
+
+        speedMultiplier: 0.75   // 25% slower than default
+        speedMultiplier: 1.0    // normal speed
+        speedMultiplier: 1.25   // 25% faster than default
+
+      duration:
+        Optional. The target time for this section to pass the reading line.
+        If set, the scroll speed for this section is computed automatically so
+        the section takes this long (at global speed 1.0). This is the easy way
+        to author by time: just say how long each beat should take.
+
+        duration: "12s"   // string with seconds
+        duration: "500ms" // milliseconds also accepted
+        duration: 12      // bare number = seconds
+
+        duration overrides speedMultiplier if both are set. The global speed
+        control (Up/Down arrows) still scales everything, so a "12s" section
+        becomes 6s at global 2.0x. Open the timing panel (press T) to confirm
+        each section lands on its target.
+    */
+
+    const scriptSections = [
+      {
+        // duration: target time for this section to pass the reading line.
+        type: "spoken",
+        label: "Hook",
+        duration: "10s",
+        text: `
+Replace this with your opening hook.
+
+One strong sentence or question
+that makes the viewer want to keep watching.
+        `
+      },
+      {
+        // Direction sections appear in a different colour and style.
+        type: "direction",
+        duration: "2s",
+        text: `
+Pause. Let the hook land before moving on.
+        `
+      },
+      {
+        // speedMultiplier works for sections you'd rather pace by feel.
+        type: "spoken",
+        label: "Main point",
+        speedMultiplier: 0.9,
+        text: `
+Replace this with the core idea of your video.
+
+Keep each thought on its own line
+so it is easy to read while you record.
+        `
+      },
+      {
+        type: "direction",
+        duration: "2s",
+        text: `
+Take a breath. Cut here if needed.
+        `
+      },
+      {
+        // No duration or speedMultiplier: falls back to the default pace.
+        type: "spoken",
+        label: "Supporting detail",
+        text: `
+Add more depth here.
+
+Break long sentences across multiple lines
+so the teleprompter never feels rushed.
+        `
+      },
+      {
+        type: "spoken",
+        label: "Closing",
+        duration: "8s",
+        text: `
+Wrap up with your call to action or summary.
+
+Tell the viewer what to do next,
+then end the script here.
+        `
+      }
+    ];
+
+    const prompter = document.getElementById("prompter");
+    const scriptElement = document.getElementById("script");
+    const statusElement = document.getElementById("status");
+    const progressBar = document.getElementById("progressBar");
+
+    let isPlaying = false;
+    let globalSpeedMultiplier = 1.0;
+
+    /*
+      Floating-point scroll accumulator.
+      Some browsers effectively round scrollTop to whole pixels. This preserves
+      tiny movements so slower speeds still accumulate smoothly.
+    */
+    let preciseScrollTop = 0;
+    let lastTimestamp = null;
+
+    function parseDuration(value) {
+      if (value == null) return null;
+      if (typeof value === "number") return value > 0 ? value : null;
+
+      const text = String(value).trim().toLowerCase();
+      let seconds;
+      if (text.endsWith("ms")) seconds = parseFloat(text) / 1000;
+      else seconds = parseFloat(text); // "12s" or bare "12" => seconds
+
+      return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+    }
+
+    function renderScript() {
+      scriptElement.innerHTML = scriptSections.map((section) => {
+        const safeText = escapeHtml(trimBlock(section.text));
+        const label = section.label
+          ? `<div class="section-label">${escapeHtml(section.label)}</div>`
+          : "";
+
+        const durationSeconds = parseDuration(section.duration);
+        if (durationSeconds != null && section.speedMultiplier != null) {
+          console.warn(
+            `Section "${section.label || section.type}" sets both duration and ` +
+            `speedMultiplier; using duration.`
+          );
+        }
+
+        // When a duration is given, the real multiplier can't be known until
+        // the section is laid out and measured, so start with 1.0 here and let
+        // applyDurations() overwrite it after layout.
+        const speedMultiplier = durationSeconds != null
+          ? 1.0
+          : (section.speedMultiplier ?? 1.0);
+
+        const durationAttr = durationSeconds != null
+          ? ` data-target-duration="${durationSeconds}"`
+          : "";
+
+        return `<section class="block ${section.type}" data-speed-multiplier="${speedMultiplier}"${durationAttr}>${label}<div class="text">${safeText}</div></section>`;
+      }).join("");
+    }
+
+    /*
+      Convert each section's target duration into the speed multiplier that
+      achieves it. Solved from the engine's own timing relation:
+
+        seconds = spanPx / pixelsPerSecond
+        pixelsPerSecond = defaultLinesPerMinute * mult * 1.0 * lineHeightPx / 60
+
+      => mult = spanPx * 60 / (targetSeconds * defaultLinesPerMinute * lineHeightPx)
+
+      spanPx is measured the same way the timing panel measures it (top of this
+      section to top of the next), so the panel will report the requested time.
+      Multipliers don't affect layout, so measuring once is safe. Global speed
+      still scales these results at runtime.
+    */
+    function applyDurations() {
+      const blocks = [...scriptElement.querySelectorAll(".block")];
+      const lineHeightPx = getLineHeightPx();
+
+      blocks.forEach((block, index) => {
+        const target = parseDuration(block.dataset.targetDuration);
+        if (target == null) return;
+
+        const next = blocks[index + 1];
+        const spanPx = next
+          ? next.offsetTop - block.offsetTop
+          : block.offsetHeight;
+
+        const mult =
+          (spanPx * 60) / (target * defaultLinesPerMinute * lineHeightPx);
+        block.dataset.speedMultiplier = mult.toFixed(4);
+      });
+    }
+
+    function trimBlock(text) {
+      return text
+        .replace(/^\n+/, "")
+        .replace(/\n+\s*$/, "")
+        .split("\n")
+        .map(line => line.trimEnd())
+        .join("\n");
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getLineHeightPx() {
+      const styles = getComputedStyle(prompter);
+      const fontSize = parseFloat(styles.fontSize);
+      const lineHeight = styles.lineHeight;
+
+      if (lineHeight.endsWith("px")) {
+        return parseFloat(lineHeight);
+      }
+
+      return fontSize * parseFloat(lineHeight);
+    }
+
+    function getCurrentSectionSpeedMultiplier() {
+      const sections = [...document.querySelectorAll(".block")];
+      const guideY = window.innerHeight * 0.5;
+
+      let bestSection = sections[0];
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      for (const section of sections) {
+        const rect = section.getBoundingClientRect();
+        const sectionCenterY = rect.top + rect.height / 2;
+        const distance = Math.abs(sectionCenterY - guideY);
+
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestSection = section;
+        }
+      }
+
+      return Number(bestSection?.dataset.speedMultiplier || 1.0);
+    }
+
+    function getEffectiveLinesPerMinute() {
+      return defaultLinesPerMinute
+        * getCurrentSectionSpeedMultiplier()
+        * globalSpeedMultiplier;
+    }
+
+    function getPixelsPerSecond() {
+      return getEffectiveLinesPerMinute() * getLineHeightPx() / 60;
+    }
+
+    function update(timestamp) {
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+      }
+
+      const deltaSeconds = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      if (isPlaying) {
+        preciseScrollTop += getPixelsPerSecond() * deltaSeconds;
+        prompter.scrollTop = preciseScrollTop;
+      } else {
+        preciseScrollTop = prompter.scrollTop;
+      }
+
+      updateHud();
+      requestAnimationFrame(update);
+    }
+
+    function updateHud() {
+      const maxScroll = prompter.scrollHeight - prompter.clientHeight;
+      const progress = maxScroll > 0 ? prompter.scrollTop / maxScroll : 0;
+      const sectionMultiplier = getCurrentSectionSpeedMultiplier();
+      const effectiveLinesPerMinute = getEffectiveLinesPerMinute();
+
+      progressBar.style.width = `${Math.min(progress * 100, 100)}%`;
+
+      statusElement.innerHTML = `
+        <strong>${isPlaying ? "Playing" : "Paused"}</strong>
+        · ${effectiveLinesPerMinute.toFixed(1)} lines/min
+        · section ${sectionMultiplier.toFixed(2)}×
+        · global ${globalSpeedMultiplier.toFixed(2)}×
+        · ${Math.round(progress * 100)}%
+      `;
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      preciseScrollTop = prompter.scrollTop;
+    }
+
+    function restart() {
+      preciseScrollTop = 0;
+      prompter.scrollTop = 0;
+      isPlaying = false;
+    }
+
+    function jumpByLines(lineCount) {
+      preciseScrollTop = Math.max(0, prompter.scrollTop + getLineHeightPx() * lineCount);
+      prompter.scrollTop = preciseScrollTop;
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    prompter.addEventListener("scroll", () => {
+      if (!isPlaying) {
+        preciseScrollTop = prompter.scrollTop;
+      }
+    });
+
+    const timingPanel = document.getElementById("timingPanel");
+
+    /*
+      TIMING ESTIMATOR
+
+      The scroll engine moves at:
+        pixels/sec = effectiveLinesPerMinute * baseLineHeightPx / 60
+
+      So the time for a section to pass the reading line is its rendered height
+      (in line-units) divided by its effective lines/minute:
+        seconds = (sectionHeightInLines / effectiveLinesPerMinute) * 60
+
+      Heights are measured from the real layout (top of one section to top of
+      the next, so the margin gap is included), which accounts for labels,
+      blank lines, and the smaller direction font automatically.
+    */
+    function measureSectionSpans() {
+      const blocks = [...scriptElement.querySelectorAll(".block")];
+      const lineHeightPx = getLineHeightPx();
+
+      return blocks.map((block, index) => {
+        const next = blocks[index + 1];
+        const spanPx = next
+          ? next.offsetTop - block.offsetTop
+          : block.offsetHeight;
+
+        const multiplier = Number(block.dataset.speedMultiplier || 1);
+        const isDirection = block.classList.contains("direction");
+        const labelEl = block.querySelector(".section-label");
+        const name = labelEl
+          ? labelEl.textContent
+          : (isDirection ? "(direction)" : "(spoken)");
+
+        return { name, isDirection, multiplier, spanPx, lineUnits: spanPx / lineHeightPx };
+      });
+    }
+
+    function computeTimings(globalMultiplier = globalSpeedMultiplier) {
+      let total = 0;
+      const rows = measureSectionSpans().map((span) => {
+        const effectiveLinesPerMinute =
+          defaultLinesPerMinute * span.multiplier * globalMultiplier;
+        const seconds = (span.lineUnits / effectiveLinesPerMinute) * 60;
+        total += seconds;
+        return { ...span, effectiveLinesPerMinute, seconds };
+      });
+      return { rows, total };
+    }
+
+    function formatSeconds(seconds) {
+      if (seconds < 60) return seconds.toFixed(1) + "s";
+      const minutes = Math.floor(seconds / 60);
+      const rest = Math.round(seconds % 60);
+      return minutes + ":" + String(rest).padStart(2, "0");
+    }
+
+    function refreshTimingPanel() {
+      if (timingPanel.classList.contains("hidden")) return;
+
+      const { rows, total } = computeTimings();
+
+      const body = rows.map((row, index) =>
+        '<tr class="' + (row.isDirection ? "direction" : "spoken") + '">' +
+          "<td>" + (index + 1) + ". " + escapeHtml(row.name) + "</td>" +
+          '<td class="num">' + row.multiplier.toFixed(2) + "\u00d7</td>" +
+          '<td class="num">' + row.effectiveLinesPerMinute.toFixed(1) + "</td>" +
+          '<td class="num">' + formatSeconds(row.seconds) + "</td>" +
+        "</tr>"
+      ).join("");
+
+      timingPanel.innerHTML =
+        "<h2>Estimated timing</h2>" +
+        '<div class="total">' + formatSeconds(total) + " total</div>" +
+        "<table><thead><tr>" +
+          "<th>Section</th>" +
+          '<th class="num">Speed</th>' +
+          '<th class="num">lpm</th>' +
+          '<th class="num">Time</th>' +
+        "</tr></thead><tbody>" + body + "</tbody></table>" +
+        '<div class="note">Default ' + defaultLinesPerMinute +
+        " lpm \u00b7 global " + globalSpeedMultiplier.toFixed(2) +
+        "\u00d7. Times cover each section's text passing the reading line; " +
+        "lead-in and run-out padding are not counted. Press T to hide.</div>";
+    }
+
+    function toggleTimingPanel() {
+      timingPanel.classList.toggle("hidden");
+      if (timingPanel.classList.contains("hidden")) return;
+
+      refreshTimingPanel();
+
+      // Also dump a table to the console, handy while writing the script.
+      const { rows, total } = computeTimings();
+      console.table(rows.map((row, index) => ({
+        "#": index + 1,
+        section: row.name,
+        type: row.isDirection ? "direction" : "spoken",
+        speed: row.multiplier,
+        lpm: Number(row.effectiveLinesPerMinute.toFixed(1)),
+        seconds: Number(row.seconds.toFixed(1)),
+      })));
+      console.log("Estimated total: " + total.toFixed(1) + "s (" + formatSeconds(total) + ")");
+    }
+
+    // Clicks inside the panel should not toggle play/pause.
+    timingPanel.addEventListener("click", (event) => event.stopPropagation());
+    // Heights change on resize (and at the 800px font breakpoint), so
+    // duration-based multipliers must be recomputed before refreshing.
+    window.addEventListener("resize", () => {
+      applyDurations();
+      refreshTimingPanel();
+    });
+
+    document.body.addEventListener("click", togglePlay);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === " ") {
+        event.preventDefault();
+        togglePlay();
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        globalSpeedMultiplier += speedStep;
+        refreshTimingPanel();
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        globalSpeedMultiplier = Math.max(0.2, globalSpeedMultiplier - speedStep);
+        refreshTimingPanel();
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        jumpByLines(4);
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        jumpByLines(-4);
+      }
+
+      if (event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        restart();
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+
+      if (event.key.toLowerCase() === "t") {
+        event.preventDefault();
+        toggleTimingPanel();
+      }
+    });
+
+    renderScript();
+    applyDurations();
+    requestAnimationFrame(update);
+  </script>
+</body>
+</html>
