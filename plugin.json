@@ -2,10 +2,18 @@
   "name": "video-creator-skills",
   "version": "0.1.0",
   "description": "Claude Code skills for YouTube video production: teleprompter and slideshow generators",
-  "author": "RevDrSquash",
+  "author": {
+    "name": "RevDrSquash"
+  },
   "repository": "https://github.com/RevDrSquash/video-creator-skills",
   "skills": [
-    "skills/create-teleprompter",
-    "skills/create-slideshow"
+    {
+      "name": "create-teleprompter",
+      "path": "skills/create-teleprompter"
+    },
+    {
+      "name": "create-slideshow",
+      "path": "skills/create-slideshow"
+    }
   ]
 }

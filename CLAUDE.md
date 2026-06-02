@@ -20,18 +20,18 @@ video-creator-skills/
 ├── README.md                            # User-facing installation and usage docs
 └── skills/
     ├── create-teleprompter/
-    │   ├── skill.md                     # Skill definition and Claude instructions
+    │   ├── SKILL.md                     # Skill definition and Claude instructions
     │   └── assets/
     │       └── teleprompter-template.html
     └── create-slideshow/
-        ├── skill.md                     # Skill definition and Claude instructions
+        ├── SKILL.md                     # Skill definition and Claude instructions
         └── assets/
             └── slideshow-template.html
 ```
 
 ## How a skill works
 
-Each `skill.md` contains:
+Each `SKILL.md` contains:
 - **Frontmatter** (`name`, `description`) — the `description` field controls when Claude auto-suggests the skill.
 - **Body** — the instructions Claude follows when the skill is invoked.
 
@@ -39,7 +39,7 @@ When a skill runs, Claude reads the relevant template from `assets/`, replaces t
 
 ## Developing a skill
 
-1. Edit `skill.md` to refine the instructions or trigger description.
+1. Edit `SKILL.md` to refine the instructions or trigger description.
 2. Edit the HTML template in `assets/` to change the visual design.
 3. Test by invoking the skill with a sample script and opening the output in a browser.
 4. Bump `version` in `plugin.json` when shipping a change.
