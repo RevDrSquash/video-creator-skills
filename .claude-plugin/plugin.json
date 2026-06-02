@@ -6,14 +6,6 @@
     "name": "RevDrSquash"
   },
   "repository": "https://github.com/RevDrSquash/video-creator-skills",
-  "skills": [
-    {
-      "name": "create-teleprompter",
-      "path": "skills/create-teleprompter"
-    },
-    {
-      "name": "create-slideshow",
-      "path": "skills/create-slideshow"
-    }
-  ]
+  "license": "MIT",
+  "keywords": ["youtube", "video", "teleprompter", "slideshow", "scripting"]
 }

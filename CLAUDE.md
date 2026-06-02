@@ -15,7 +15,8 @@ Both skills generate a self-contained `.html` file you can open in any browser �
 
 ```
 video-creator-skills/
-├── plugin.json                          # Plugin manifest (name, version, skills list)
+├── .claude-plugin/
+│   └── plugin.json                      # Plugin manifest (name, version, author, etc.)
 ├── CLAUDE.md                            # This file
 ├── README.md                            # User-facing installation and usage docs
 └── skills/
